@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Workspace {
+  id        String    @id @default(cuid())
+  name      String
+  path      String    @unique
+  repoName  String?
+  branch    String?
+  dirty     Boolean   @default(false)
+  sessions  Session[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Session {
+  id          String            @id @default(cuid())
+  title       String
+  workspaceId String
+  status      String            @default("idle")
+  archived    Boolean           @default(false)
+  workspace   Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messages    Message[]
+  events      Event[]
+  approvals   ApprovalRequest[]
+  fileChanges FileChange[]
+  commandRuns CommandRun[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      String
+  content   String
+  status    String   @default("completed")
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  sessionId String
+  type      String
+  messageId String?
+  stepId    String?
+  payload   String
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model ApprovalRequest {
+  id         String   @id @default(cuid())
+  sessionId  String
+  stepId     String?
+  actionType String
+  summary    String
+  payload    String
+  riskLevel  String
+  state      String   @default("pending")
+  policy     String   @default("always_ask")
+  resolvedAt DateTime?
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model FileChange {
+  id        String   @id @default(cuid())
+  sessionId String
+  path      String
+  before    String?
+  after     String
+  patch     String
+  stepId    String?
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model CommandRun {
+  id        String   @id @default(cuid())
+  sessionId String
+  command   String
+  cwd       String?
+  status    String   @default("proposed")
+  stdout    String   @default("")
+  stderr    String   @default("")
+  exitCode  Int?
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
